@@ -1,5 +1,5 @@
 import aut.views as aut
-import viewing.views as viewing
+import browse.views as viewing
 from django.contrib import admin
 from django.urls import path
 

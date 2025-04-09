@@ -1,6 +1,6 @@
 import requests
 from django.core.management.base import BaseCommand
-from fetchingdata.models import Coin, Price_history
+from base.models import Coin 
 class Command(BaseCommand):
     
     def handle(self, *args, **kwargs):

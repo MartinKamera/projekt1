@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from fetchingdata.models import Coin
+from base.models import Coin
 from django.shortcuts import render, get_object_or_404
 
 def coin_detail(request, coin_id):

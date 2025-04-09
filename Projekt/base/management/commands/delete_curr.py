@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from fetchingdata.models import FioCurr  
+from base.models import FioCurr  
 
 class Command(BaseCommand):
 
