@@ -1,6 +1,6 @@
 import requests
 from django.core.management.base import BaseCommand
-from base.models import FioCurr
+from base.models import FiatCurr
 
 class Command(BaseCommand):
     
@@ -10,7 +10,7 @@ class Command(BaseCommand):
         if req.status_code == 200:
             data = req.json()
             for rate in ["EUR", "GBP", "CZK", "PLN"]:
-                curr, created = FioCurr.objects.get_or_create(
+                curr, created = FiatCurr.objects.get_or_create(
                 symbol=rate,
                 defaults={'price': data["conversion_rates"][rate]}
                 )

@@ -1,13 +1,13 @@
 from django.core.management.base import BaseCommand
-from base.models import Coin
+from base.models import Coin, Price_history
 
 class Command(BaseCommand):
+    help = 'Deletes coins without any price history'
 
     def handle(self, *args, **kwargs):
-        emptyCoins = Coin.objects.filter(marketpriceUSD__isnull = True)
-
-
-        if emptyCoins.exists:
-            for coin in emptyCoins:
-                self.stdout.write(f"smazal jsem {coin.id}")
+        cryptos = Coin.objects.all()
+        for coin in cryptos:
+            
+            if not coin.price_history.exists():  
+                self.stdout.write(f"Deleting {coin.id} ({coin.symbol}) - no price history")
                 coin.delete()

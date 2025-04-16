@@ -6,7 +6,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         params = { 
             "ids": ",".join(Coin.objects.values_list('id', flat = True)),
-            "vs_currencies": "usd",
+            "vs_currencies": ",".join(["usd", "eur", "czk", "gbp", "pln"]),
             "precision": "3"
             }
 
@@ -23,15 +23,17 @@ class Command(BaseCommand):
             
             for coin_id in json:
                 asset = Coin.objects.get(id=coin_id)
-                priceUSD = json[coin_id]['usd']
-                asset.marketpriceUSD = priceUSD
-                asset.save()
-
+                
                 Price_history.objects.create(
-                    asset = asset,
-                    priceUSD = priceUSD
+                    coin = asset,
+                    priceUSD = json[coin_id]['usd'],
+                    priceEUR = json[coin_id]['eur'],
+                    priceCZK = json[coin_id]['czk'],
+                    priceGBP = json[coin_id]['gbp'],
+                    pricePLN = json[coin_id]['pln']
                 )
 
-                self.stdout.write(self.style.SUCCESS(f"New record in {asset.id} have been created"))
+                self.stdout.write(self.style.SUCCESS(f"New record in {asset.id} has been created"))
+        
         else:
             self.stdout.write(self.style.WARNING("Connection to geckocoin api could not be established"))
