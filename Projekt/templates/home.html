@@ -1,3 +1,4 @@
+<!-- HOME TEMPLATE -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,14 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
     <style>
-       
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-       
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Arial', sans-serif;
             background-color: #f4f4f9;
@@ -20,8 +14,6 @@
             line-height: 1.6;
             padding: 20px;
         }
-
-        
         .container {
             max-width: 800px;
             margin: 0 auto;
@@ -31,22 +23,16 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             text-align: center;
         }
-
-        
         h1 {
             font-size: 2.5rem;
             color: #2c3e50;
             margin-bottom: 20px;
         }
-
-        
         p {
             font-size: 1.2rem;
             color: #666;
             margin-bottom: 30px;
         }
-
-        
         .btn {
             display: inline-block;
             padding: 10px 20px;
@@ -56,43 +42,19 @@
             border-radius: 4px;
             font-size: 1rem;
             transition: background 0.3s ease;
+            border: none;
+            cursor: pointer;
         }
-
-        .btn:hover {
-            background-color: #2980b9;
-        }
-        .reg {
-            display: inline-block;
-            padding: 5px 10px;
-            background-color: #3498db;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            transition: background 0.3s ease;
-        }
-        .reg:hover {
-            background-color: #2980b9;
-        }
+        .btn:hover { background-color: #2980b9; }
     </style>
-</head>  
+</head>
 <body>
+    
     <div class="container">
-        
         <h1>Welcome to Crypto Tracker</h1>
-
-        
-        <p>
-            Track the latest cryptocurrency prices and market trends in real-time.
-            Explore detailed information about your favorite coins and stay updated.
-        </p>
-        
-        <p><a href="{% url 'coin_list' %}" class="btn">View Coin List</a></p>
-        <p><a href="{% url 'registration' %}" class ="reg">Sign-up</a></p>
-        
-
-    
-    
+        <p>Track the latest cryptocurrency prices and market trends in real-time.
+           Explore detailed information about your favorite coins and stay updated.</p>
+        <p><a href="{% url 'login' %}" class="btn">Sign in</a></p>
     </div>
 </body>
 </html>

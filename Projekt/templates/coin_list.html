@@ -130,9 +130,7 @@
     </style>
 </head>
 <body>
-    <script>
-        
-    </script>
+   
     <div class="container">
         <h1>Coin List</h1>
 
@@ -145,12 +143,13 @@
         
         <ul class="coin-list">
             {% for coin in coin_list %}
-            <li><a href="{% url 'coin_detail' coin.id %}">
+            <li>
+                <a href="{% url 'coin_detail' coin.id %}">
                     <strong>{{ coin.name }}</strong> ({{ coin.symbol }})
                     <p>Current Price: ${{ coin.marketpriceUSD }}</p>
                     <p>Last Updated: {{ coin.last_updated|date:"Y-m-d H:i" }}</p>
-                
-                </li></a>
+                </a>
+            </li>
             {% empty %}
                 <li class="empty-message">No coins available.</li>
             {% endfor %}

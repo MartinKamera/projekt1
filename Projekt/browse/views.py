@@ -22,7 +22,8 @@ def coin_list(request):
     context = {
         'coin_list': coins
     }
-
+    
+    print(Coin.objects.count())
     return render(request, 'coin_list.html', context)
 
 

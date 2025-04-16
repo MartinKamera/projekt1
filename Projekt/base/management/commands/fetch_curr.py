@@ -18,6 +18,6 @@ class Command(BaseCommand):
                     curr.price = data["conversion_rates"][rate]
                     curr.save()
         
-        else:
-            self.stdout.write(self.style.ERROR('Connection to "ExchangeRate-Api" could not been established'))    
+        
+         
         

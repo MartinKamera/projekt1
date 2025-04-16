@@ -1,6 +1,6 @@
 import requests
 from django.core.management.base import BaseCommand
-from base.models import Coin 
+from base.models import Coin, Price_history
 class Command(BaseCommand):
     
     def handle(self, *args, **kwargs):
@@ -32,5 +32,6 @@ class Command(BaseCommand):
                     priceUSD = priceUSD
                 )
 
+                self.stdout.write(self.style.SUCCESS(f"New record in {asset.id} have been created"))
         else:
-            print("Chyba:", response.status_code)
+            self.stdout.write(self.style.WARNING("Connection to geckocoin api could not be established"))
