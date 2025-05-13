@@ -2,8 +2,8 @@ name: Fetch Crypto Data
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  
-  workflow_dispatch:  
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   fetch_crypto:
@@ -20,22 +20,14 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m venv venv
-        source venv/bin/activate
         pip install -r requirements.txt
-
-    - name: Debugging directory structure
-      run: |
-        ls -R 
 
     - name: Set up Django environment
       run: |
-        source venv/bin/activate
         cd projekt1/Projekt
-        python manage.py migrate  
+        python manage.py migrate
 
     - name: Run the fetch_crypto management command
       run: |
-        source venv/bin/activate
         cd projekt1/Projekt
         python manage.py fetch_crypto
