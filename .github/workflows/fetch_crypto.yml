@@ -27,9 +27,11 @@ jobs:
     - name: Set up Django environment
       run: |
         source venv/bin/activate
+        cd projekt1/Projekt
         python manage.py migrate  
 
     - name: Run the fetch_crypto management command
       run: |
         source venv/bin/activate
+        cd projekt1/Projekt
         python manage.py fetch_crypto
