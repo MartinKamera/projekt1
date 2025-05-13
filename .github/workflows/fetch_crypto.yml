@@ -24,10 +24,11 @@ jobs:
 
     - name: Set up Django environment
       run: |
-        cd projekt1/Projekt
+        cd Projekt
         python manage.py migrate
 
     - name: Run the fetch_crypto management command
       run: |
-        cd projekt1/Projekt
+        cd Projekt
         python manage.py fetch_crypto
+
