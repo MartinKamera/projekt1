@@ -1,17 +1,75 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ coin.name }}{% endblock %}
-
-{% block header_title %}{{ coin.name }}{% endblock %}
-
 {% block content %}
-<ul class="price_history">
-    {% for entry in coin.price_history.all %}
-    <li>
-        <strong>${{ entry.priceUSD }} at {{ entry.timestamp|date:"Y-m-d H:i" }}</strong>
-    </li>
-    {% empty %}
-    <li class="empty-message">No price history available.</li>
-    {% endfor %}
-</ul>
+<h2>{{ coin.name }} – vývoj ceny ({{ currency }})</h2>
+
+<canvas id="priceChart" width="800" height="400"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+
+<script>
+
+    const chartData = {{ chart_data|safe }};
+
+
+    console.log('Načtená data:', chartData);
+
+    const ctx = document.getElementById('priceChart').getContext('2d');
+
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Cena v {{ currency }}',
+                data: chartData,
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            parsing: {
+                xAxisKey: 'x',
+                yAxisKey: 'y'
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        tooltipFormat: 'dd.MM.yyyy HH:mm',
+                        displayFormats: {
+                            hour: 'dd.MM HH:mm',
+                            day: 'dd.MM'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Čas'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Cena ({{ currency }})'
+                    },
+                    beginAtZero: false
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.formattedValue + ' {{ currency }}';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

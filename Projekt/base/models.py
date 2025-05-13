@@ -59,7 +59,7 @@ class Coin(models.Model):
         history = self.price_history.order_by('-timestamp')
         if count:
             history = history[:count]
-
+            
         data = []
         for entry in history:
             price = getattr(entry, f'price{currency}')
@@ -69,7 +69,6 @@ class Coin(models.Model):
     
     def get_current_price(self, currency):
         latestentry = self.price_history.order_by('-timestamp').first()
-    
         
         if latestentry:
             price = getattr(latestentry,f'price{currency}')
@@ -80,7 +79,10 @@ class Coin(models.Model):
             }
             return price_bundle
         
-        return f'No price record available' 
+        return {
+            'price': None,
+            'last_updated': None,
+        } 
 
     def __str__(self):
         return f"{self.name}"

@@ -1,13 +1,29 @@
 from base.models import Coin, Portfolio
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
+import json
 
 def coin_detail(request, coin_id):
-    crypto = get_object_or_404(Coin, id = coin_id)
+    crypto = get_object_or_404(Coin, id=coin_id)
+    currency = 'USD'
+    
+    if request.user.is_authenticated:
+        active_portfolio_id = request.session.get('active_portfolio_id') 
+        if active_portfolio_id:
+            try:
+                active_portfolio = Portfolio.objects.get(id=active_portfolio_id)
+                currency = active_portfolio.currency
+            except Portfolio.DoesNotExist:
+                pass
+    raw_data = crypto.get_price_data(currency=currency)  
     context = {
-        'coin': crypto
+        'coin': crypto,
+        'chart_data': raw_data,
+        'currency': currency,
     }
-    return render(request, 'coin_view.html', context )
+    print("Tohle je context")
+    print(context)
+    return render(request, 'coin_view.html', context)
 
 def home(request):
     return render(request, 'home.html')
@@ -29,7 +45,7 @@ def coin_list(request):
                 active_portfolio = Portfolio.objects.get(id=active_portfolio_id)
                 currency = active_portfolio.currency
             except Portfolio.DoesNotExist:
-                currency = 'USD'
+               pass
         else:
             currency = 'USD'
         

@@ -1,0 +1,35 @@
+name: Fetch Crypto Data
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  
+  workflow_dispatch:  
+
+jobs:
+  fetch_crypto:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+
+    - name: Set up Django environment
+      run: |
+        source venv/bin/activate
+        python manage.py migrate  
+
+    - name: Run the fetch_crypto management command
+      run: |
+        source venv/bin/activate
+        python manage.py fetch_crypto
