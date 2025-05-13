@@ -24,6 +24,10 @@ jobs:
         source venv/bin/activate
         pip install -r requirements.txt
 
+    - name: Debugging directory structure
+      run: |
+        ls -R 
+
     - name: Set up Django environment
       run: |
         source venv/bin/activate
