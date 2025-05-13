@@ -22,7 +22,6 @@ jobs:
       run: |
         python -m venv venv
         source venv/bin/activate
-        pip install torch -f https://download.pytorch.org/whl/torch_stable.html
         pip install -r requirements.txt
 
     - name: Set up Django environment
