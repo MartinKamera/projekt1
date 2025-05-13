@@ -1,6 +1,6 @@
 import requests
 from django.core.management.base import BaseCommand
-from base.models import Coin, Price_history
+from base.models import Coin, PriceHistory
 class Command(BaseCommand):
     
     def handle(self, *args, **kwargs):
@@ -24,7 +24,7 @@ class Command(BaseCommand):
             for coin_id in json:
                 asset = Coin.objects.get(id=coin_id)
                 
-                Price_history.objects.create(
+                PriceHistory.objects.create(
                     coin = asset,
                     priceUSD = json[coin_id]['usd'],
                     priceEUR = json[coin_id]['eur'],

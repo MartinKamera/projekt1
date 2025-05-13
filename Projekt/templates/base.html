@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Crypto App{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            position: relative;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .portfolio-select-wrapper {
+            position: relative;
+        }
+        .portfolio-select {
+            padding: 8px 15px;
+            padding-right: 35px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #fff;
+            color: #333;
+            font-size: 0.95rem;
+            cursor: pointer;
+            appearance: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            min-width: 160px;
+        }
+        .portfolio-select:hover {
+            border-color: #3498db;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+        }
+        .portfolio-select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        .select-arrow {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #666;
+            font-size: 0.8rem;
+        }
+        .add-portfolio-btn {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #fff;
+            color: #333;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            text-decoration: none !important;
+        }
+        .add-portfolio-btn:hover {
+            background-color: #f8f8f8;
+            border-color: #3498db;
+            color: #3498db;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+        }
+        .add-portfolio-btn i {
+            margin-right: 5px;
+        }
+        .user-menu {
+            position: relative;
+        }
+        .user-btn {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #fff;
+            color: #333;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .user-btn:hover {
+            background-color: #f8f8f8;
+            border-color: #3498db;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+        }
+        .user-icon {
+            margin-right: 8px;
+            font-size: 1rem;
+        }
+        .user-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            width: 160px;
+            margin-top: 5px;
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 8px 12px;
+            text-decoration: none;
+            color: #333;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .user-dropdown a:hover {
+            background-color: #f4f4f9;
+            color: #3498db;
+        }
+        .user-dropdown a i {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .login-btn {
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .login-btn:hover {
+            background-color: #2980b9;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+        }
+        .main-content {
+            padding: 20px 0;
+        }
+        .search-form { display: flex; justify-content: center; margin-bottom: 20px; }
+        .search-form input[type="text"] {
+            width: 70%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;
+        }
+        .search-form button {
+            padding: 10px 20px; background-color: #3498db; color: #fff;
+            border: none; border-radius: 4px; margin-left: 10px; cursor: pointer; font-size: 1rem;
+        }
+        .search-form button:hover { background-color: #2980b9; }
+        .coin-list, .price_history { list-style: none; padding: 0; }
+        .coin-list li, .price_history li {
+            background: #f9f9f9; margin-bottom: 10px; padding: 15px;
+            border-radius: 4px; border: 1px solid #eee; transition: background 0.3s ease;
+        }
+        .coin-list li:hover, .price_history li:hover { background: #f1f1f1; }
+        .coin-list li strong, .price_history li strong {
+            font-size: 1.2rem; color: #2c3e50;
+        }
+        .coin-list li p, .price_history li p { margin: 5px 0; color: #666; }
+        .empty-message { text-align: center; color: #888; font-style: italic; }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <h1>{% block header_title %}Crypto App{% endblock %}</h1>
+            <div class="auth-section">
+                {% if user.is_authenticated %}
+                    <div class="portfolio-select-wrapper">
+                        <form method="POST" action="{% url 'portfolioSelection' %}">
+                            {% csrf_token %}
+                            <select name="switch" class="portfolio-select" onchange="this.form.submit()">
+                                {% for portfolio in user_portfolios %}
+                                <option value="{{ portfolio.id }}" {% if portfolio.id == request.session.active_portfolio_id %}selected{% endif %}>
+                                    {{ portfolio.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        <div class="select-arrow">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <a href="{% url 'portfolio_creation' %}" class="add-portfolio-btn">
+                        <i class="fas fa-plus"></i>
+                        <span>Add</span>
+                    </a>
+                    <div class="user-menu" id="user-menu">
+                        <button class="user-btn" id="user-btn">
+                            <i class="fas fa-user-circle user-icon"></i>
+                            <span>{{ user.username|truncatechars:10 }}</span>
+                        </button>
+                        <div class="user-dropdown" id="user-dropdown">
+                            <a href="#"><i class="fas fa-cog"></i>Settings</a>
+                            <a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i>Logout</a>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{% url 'login' %}" class="login-btn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Login
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="main-content">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+    <script>
+        const userMenu = document.getElementById('user-menu');
+        const dropdown = document.getElementById('user-dropdown');
+        let inside = false;
+        userMenu.addEventListener('mouseenter', () => {
+            inside = true;
+            dropdown.style.display = 'block';
+        });
+        userMenu.addEventListener('mouseleave', () => {
+            inside = false;
+            setTimeout(() => {
+                if (!inside) {
+                    dropdown.style.display = 'none';
+                }
+            }, 150);
+        });
+        dropdown.addEventListener('mouseenter', () => {
+            inside = true;
+        });
+        dropdown.addEventListener('mouseleave', () => {
+            inside = false;
+            setTimeout(() => {
+                if (!inside) {
+                    dropdown.style.display = 'none';
+                }
+            }, 150);
+        });
+    </script>
+</body>
+</html>
