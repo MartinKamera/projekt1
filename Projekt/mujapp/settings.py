@@ -11,9 +11,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import os
-#import dj_database_url
+import dj_database_url
 from pathlib import Path
-#import dotenv
+import dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,8 +40,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "base",
-    "browse",
-    "aut",
 ]
 
 MIDDLEWARE = [
@@ -82,23 +80,23 @@ WSGI_APPLICATION = "mujapp.wsgi.application"
 
 
 
-#dotenv.load_dotenv(os.path.join(BASE_DIR, '.env'))
+dotenv.load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-#DATABASES = {
-#       'default': dj_database_url.config(
-#       conn_max_age=600,
-#       ssl_require=True
-#    )
-#}
+DATABASES = {
+       'default': dj_database_url.config(
+       conn_max_age=600,
+       ssl_require=True
+    )
+}
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+#}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
