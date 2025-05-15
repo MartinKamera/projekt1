@@ -1,0 +1,10 @@
+- name: Check DB connection
+  run: |
+    python -c "
+    import os, psycopg2
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    print('✅ Connected to DB!')
+    conn.close()
+    "
+  env:
+    DATABASE_URL: ${{ secrets.DATABASE_URL }}
