@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from base.models import Coin, Price_history
+from base.models import Coin, PriceHistory
 
 class Command(BaseCommand):
     help = 'Deletes coins without any price history'

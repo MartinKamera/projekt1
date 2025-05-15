@@ -108,5 +108,9 @@ class PriceHistory(models.Model):
     pricePLN = models.DecimalField(max_digits=20, decimal_places=3)
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name = "Price history entry"
+        verbose_name_plural = "Price history"
+
     def __str__(self):
-        return f'{self.asset} was {self.priceUSD} USD at {self.timestamp}'
+        return f'{self.coin} was {self.priceUSD} USD at {self.timestamp}'

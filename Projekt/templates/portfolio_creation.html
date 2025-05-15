@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Portfolio | Crypto Tracker</title>
+    <title>Create Portfolio</title>
     <style>
         * {
             margin: 0;
@@ -131,6 +131,16 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        .btn-skip {
+            background-color: #fff;
+            color: #3498db;
+            border: 2px solid #3498db;
+            margin-top: 10px;
+        }
+
+        .btn-skip:hover {
+            background-color: #ecf6fc;
+        }
     </style>
 </head>
 <body>
@@ -168,6 +178,8 @@
             {% endfor %}
 
             <button type="submit" class="btn">Create Portfolio</button>
+            <a href="{% url 'coin_list' %}" class="btn btn-skip">Skip</a>
+            
         </form>
     </div>
 </body>

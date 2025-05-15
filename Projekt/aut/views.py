@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from base.form_class_extention import LoginForm
 from base.models import Portfolio
+from django.urls import reverse
 
 
 def register(request):
@@ -39,13 +40,12 @@ def login(request):
 
         if user is not None:
             auth_login(request, user)
-
-            try:
-                portfolios = Portfolio.objects.filter(user=user)
-                request.session['active_portfolio_id'] = portfolios[0].id
-                return redirect(request.META.get('HTTP_REFERER'))
+            portfolios = portfolios = Portfolio.objects.filter(user=user)
             
-            except Portfolio.DoesNotExist:
+            if portfolios.exists():
+                request.session['active_portfolio_id'] = portfolios.first().id
+                return redirect(request.META.get('HTTP_REFERER') or reverse('coin_list'))
+            else:
                 return redirect('portfolio_creation')
         
         messages.error(request, "Invalid username or password.")

@@ -46,15 +46,32 @@
             cursor: pointer;
         }
         .btn:hover { background-color: #2980b9; }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     
     <div class="container">
-        <h1>Welcome to Crypto Tracker</h1>
-        <p>Track the latest cryptocurrency prices and market trends in real-time.
-           Explore detailed information about your favorite coins and stay updated.</p>
-        <p><a href="{% url 'login' %}" class="btn">Sign in</a></p>
+        <h1>Front page</h1>
+        <p>Description</p>
+        <div class="btn-group">
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn">Logout</button>
+            </form>
+                <a href="{% url 'coin_list' %}" class="btn">Continue as {{ user.username }}</a>
+            {% else %}
+            <a href="{% url 'login' %}" class="btn">Login</a>
+            <a href="{% url 'coin_list' %}" class="btn">Continue as Guest</a>
+    {% endif %}
+</div>  
+
     </div>
 </body>
 </html>
