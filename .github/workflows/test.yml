@@ -2,7 +2,7 @@
   run: |
     python -c "
     import os, psycopg2
-    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    conn = psycopg2.connect('${{ secrets.DATABASE_URL }}')
     print('✅ Connected to DB!')
     conn.close()
     "
