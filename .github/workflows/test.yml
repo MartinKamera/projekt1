@@ -1,10 +1,27 @@
-- name: Check DB connection
-  run: |
-    python -c "
-    import os, psycopg2
-    conn = psycopg2.connect('${{ secrets.DATABASE_URL }}')
-    print('✅ Connected to DB!')
-    conn.close()
-    "
-  env:
-    DATABASE_URL: ${{ secrets.DATABASE_URL }}
+name: Test DB Connection
+on: [workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install psycopg2
+        run: pip install psycopg2-binary
+
+      - name: Check DB connection
+        run: |
+          python -c "
+          import os, psycopg2
+          conn = psycopg2.connect(os.environ['DATABASE_URL'])
+          print('✅ Connected to DB!')
+          conn.close()
+          "
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
