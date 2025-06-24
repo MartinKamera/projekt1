@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 import dj_database_url
 from pathlib import Path
-from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -67,6 +66,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "base.context_processor.user_portfolios",
+                "base.context_processor.last_updated"
             ],
         },
     },
@@ -74,19 +74,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "mujapp.wsgi.application"
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+    }
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 
 
-load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 DATABASES = {
-       'default': dj_database_url.config(
-       conn_max_age=600,
-       ssl_require=True
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',         
+        'USER': 'postgres',
+        'PASSWORD': 'xywmih-hirqah',  
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

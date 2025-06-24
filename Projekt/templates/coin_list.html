@@ -1,26 +1,195 @@
 {% extends 'base.html' %}
-
 {% block title %}Coin List{% endblock %}
-
 {% block header_title %}Coin List{% endblock %}
 
 {% block content %}
-<form class="search-form" method="get" action="{% url 'coin_list' %}">
-    <input type="text" name="query" placeholder="Search by name or symbol" value="{{ query|default:'' }}">
-    <button type="submit">Search</button>
+<style>
+    .main-content {
+        padding: 20px 0;
+    }
+    .search-form { display: flex; justify-content: center; margin-bottom: 20px; }
+    .search-form input[type="text"] {
+        width: 70%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;
+    }
+    .search-form button {
+        padding: 10px 20px; background-color: #3498db; color: #fff;
+        border: none; border-radius: 4px; margin-left: 10px; cursor: pointer; font-size: 1rem;
+    }
+    .search-form button:hover { background-color: #2980b9; }
+    .coin-list, .price_history { list-style: none; padding: 0; }
+    .coin-list li, .price_history li {
+        background: #f9f9f9; margin-bottom: 10px; padding: 15px;
+        border-radius: 4px; border: 1px solid #eee; transition: background 0.3s ease;
+    }
+    .coin-list li:hover, .price_history li:hover { background: #f1f1f1; }
+    .coin-list li strong, .price_history li strong {
+        font-size: 1.2rem; color: #2c3e50;
+    }
+    .coin-list li p, .price_history li p { margin: 5px 0; color: #666; }
+    .empty-message { text-align: center; color: #888; font-style: italic; } 
+</style>
+
+<form class="search-form" onsubmit="return false;" style="flex-direction: column; align-items: center; gap: 12px;">
+  <input type="text" id="coin-search" name="query" placeholder="Search by name or symbol" autocomplete="off"
+      value="{{ query|default:'' }}" style="width: 70%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;">
+
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+    <label><input type="checkbox" id="filter-toggle"> Enable filters</label>
+
+    <select id="period-filter" disabled style="padding: 8px; border-radius: 4px; width: 120px;">
+      <option value="">Select period</option>
+      <option value="1h">1h</option>
+      <option value="24h">24h</option>
+      <option value="7d">7d</option>
+    </select>
+
+    <select id="direction-filter" disabled style="padding: 8px; border-radius: 4px; width: 120px;">
+      <option value="">Sort order</option>
+      <option value="rising">Rising</option>
+      <option value="falling">Falling</option>
+    </select>
+
+    <button id="reset-btn" type="button" style="padding: 8px 14px; background: #3498db; color: white; border: none; border-radius: 4px;">Reset filters</button>
+  </div>
 </form>
 
-<ul class="coin-list">
-    {% for coin in coin_list %}
-    <li>
-        <a href="{% url 'coin_detail' coin.id %}">
-            <strong>{{ coin.name }}</strong> ({{ coin.symbol }})
-            <p>Current Price:  {{ coin.price }} {{currency}}</p>
-            <p>Last Updated: {{ coin.last_updated|date:"Y-m-d H:i" }}</p>
-        </a>
-    </li>
-    {% empty %}
-        <li class="empty-message">No coins available.</li>
-    {% endfor %}
-</ul>
+<ul class="coin-list" id="coin-list-container"></ul>
+
+<script>
+const searchInput = document.getElementById('coin-search');
+const coinListContainer = document.getElementById('coin-list-container');
+const directionFilter = document.getElementById('direction-filter');
+const periodFilter = document.getElementById('period-filter');
+const resetBtn = document.getElementById('reset-btn');
+const toggleFilter = document.getElementById('filter-toggle');
+let debounceTimeout = null;
+
+function renderCoinList(coins, currency) {
+    const filtersEnabled = toggleFilter.checked;
+    const period = periodFilter.value || "24h";
+
+    if (coins.length === 0) {
+        coinListContainer.innerHTML = '<li class="empty-message">No coins available.</li>';
+        return;
+    }
+
+    let html = '';
+    for (const coin of coins) {
+
+        const growthValue = coin.growth && coin.growth[period];
+        const growthFormatted = growthValue !== null && growthValue !== undefined ? growthValue.toFixed(4) + "%" : "-";
+
+        let growthColor = '#888';  
+        if (growthValue > 0) growthColor = 'green';
+        else if (growthValue < 0) growthColor = 'red';
+
+        html += `
+        <li style="position: relative; padding-right: 90px;">
+            <a href="/coin_list/${coin.id}/" style="display: block;">
+                <strong>${coin.name}</strong> (${coin.symbol})
+                <p>Current Price: ${coin.price !== null ? coin.price.toFixed(2) + ' ' + currency : "- " + currency}</p>
+            </a>
+            <div style="
+                position: absolute;
+                top: 50%;
+                right: 15px;
+                transform: translateY(-50%);
+                font-weight: bold;
+                font-size: 1rem;
+                white-space: nowrap;
+            ">Last ${period}: <span style="color: ${growthColor}">${growthFormatted}</span></div>
+        </li>`;
+    }
+    coinListContainer.innerHTML = html;
+}
+
+
+function fetchAndRenderCoinList() {
+    const query = searchInput.value.trim();
+    const direction = directionFilter.value;
+    const period = periodFilter.value;
+    const filtersEnabled = toggleFilter.checked;
+
+    const params = new URLSearchParams();
+    if (query) params.append("query", query);
+    if (filtersEnabled && direction && period) {
+        params.append("sort", period);
+        params.append("direction", direction);
+    }
+
+    const url = `/ajax/search_coins/?${params.toString()}`;
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(response => response.json())
+        .then(data => {
+            renderCoinList(data.coins, data.currency);
+            if (data.last_updated) {
+                window.lastUpdated = data.last_updated;
+                if (typeof window.scheduleNextRefresh === 'function') {
+                    window.scheduleNextRefresh(window.lastUpdated);
+                }
+            }
+        });
+    window.history.replaceState(null, "", "/coin_list/?" + params.toString());
+}
+
+function applyURLParams() {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get("query");
+    const sort = params.get("sort");
+    const direction = params.get("direction");
+
+    if (query) searchInput.value = query;
+    if (sort && ["1h", "24h", "7d"].includes(sort)) {
+        periodFilter.value = sort;
+        toggleFilter.checked = true;
+        periodFilter.disabled = false;
+    }
+    if (direction && ["rising", "falling"].includes(direction)) {
+        directionFilter.value = direction;
+        toggleFilter.checked = true;
+        directionFilter.disabled = false;
+    }
+
+    if (toggleFilter.checked) {
+        directionFilter.disabled = false;
+        periodFilter.disabled = false;
+    }
+}
+
+window.handleExpired = function () {
+    fetchAndRenderCoinList();
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    applyURLParams();
+    fetchAndRenderCoinList();
+});
+
+searchInput.addEventListener('input', function () {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(fetchAndRenderCoinList, 200);
+});
+
+[directionFilter, periodFilter].forEach(el => {
+    el.addEventListener('change', fetchAndRenderCoinList);
+});
+
+toggleFilter.addEventListener('change', () => {
+    const enabled = toggleFilter.checked;
+    directionFilter.disabled = !enabled;
+    periodFilter.disabled = !enabled;
+    fetchAndRenderCoinList();
+});
+
+resetBtn.addEventListener('click', () => {
+    searchInput.value = "";
+    directionFilter.value = "";
+    periodFilter.value = "";
+    toggleFilter.checked = false;
+    directionFilter.disabled = true;
+    periodFilter.disabled = true;
+    fetchAndRenderCoinList();
+});
+</script>
+
 {% endblock %}

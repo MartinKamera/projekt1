@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% block title %}Portfolio Summary{% endblock %}
+{% block content %}
+<style>
+.portfolio-summary-container {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(44,62,80,0.08);
+  padding: 30px 24px 18px 24px;
+  margin: 0 auto;
+  max-width: 820px;
+  margin-top: 32px;
+}
+.coin-accordion-section {
+  margin-bottom: 18px;
+  border-radius: 8px;
+  background: #f8fafc;
+  box-shadow: 0 2px 6px rgba(44,62,80,0.03);
+}
+.accordion-btn {
+  width: 100%;
+  background: #e2eaf6;
+  color: #222f3e;
+  border: none;
+  padding: 15px 18px 15px 30px;
+  text-align: left;
+  font-size: 1.13em;
+  font-weight: 600;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.accordion-btn .profit-box {
+  min-width: 210px;
+  text-align: right;
+  font-size: 1.05em;
+  font-weight: 500;
+}
+.transactions-list {
+  list-style: none;
+  padding: 0 12px 8px 12px;
+  margin: 0;
+  border-radius: 0 0 8px 8px;
+  display: none;
+  background: #f9fbfd;
+}
+.transactions-list.open {
+  display: block;
+}
+.transaction-row {
+  border: 2px solid #222;
+  border-radius: 15px;
+  background: #fff;
+  margin-bottom: 14px;
+  font-size: 1.10em;
+  padding: 15px 28px;
+  cursor: pointer;
+  position: relative;
+  flex-direction: column;
+  display: flex;
+  overflow: hidden;
+}
+.row-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.row-meta {
+  display: flex;
+  justify-content: space-between;
+  color: #aaa;
+  font-size: 0.94em;
+  margin-bottom: 9px;
+  padding: 0 5px;
+}
+.sell-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.sell-status {
+  font-size: 0.97em;
+  margin-top: 8px;
+  text-align: center;
+}
+.sell-action-btn {
+  border: none;
+  border-radius: 6px;
+  min-width: 180px;
+  text-align: center;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  color: white;
+}
+.sell-action-btn.btn-profit {
+  background-color: #2e7d32;
+}
+.sell-action-btn.btn-profit:hover {
+  background-color: #1b5e20;
+}
+.sell-action-btn.btn-loss {
+  background-color: #c62828;
+}
+.sell-action-btn.btn-loss:hover {
+  background-color: #8e0000;
+}
+.sell-action-btn.btn-neutral {
+  background-color: #666;
+}
+.sell-action-btn.btn-neutral:hover {
+  background-color: #444;
+}
+.summary-stats {
+  font-size: 1.08em;
+  margin-bottom: 18px;
+  line-height: 1.6em;
+}
+.summary-stats span {
+  display: block;
+}
+.summary-stats .profit {
+  font-weight: bold;
+}
+.summary-stats .profit.positive { color: green; }
+.summary-stats .profit.negative { color: red; }
+.summary-stats .profit.zero { color: #888; }
+</style>
+
+<div class="portfolio-summary-container">
+  <div id="summary-stats" class="summary-stats"></div>
+</div>
+<div class="portfolio-summary-container">
+  <div id="accordion-container"></div>
+</div>
+
+<script>
+function formatVal(v, d = 5) {
+  if (typeof v !== "number") return "-";
+  const rounded = parseFloat(v.toFixed(d));
+  return rounded.toLocaleString("cs-CZ", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: d
+  });
+}
+function formatDate(iso) {
+  if (!iso) return "unknown";
+  const dt = new Date(iso);
+  return dt.toLocaleString('cs-CZ');
+}
+
+function renderAccordion(data) {
+  const container = document.getElementById("accordion-container");
+  const { coins, portfolio_name, portfolio_currency, last_price_update, total_invested, free_funds, total_value, total_profit_abs, total_profit_pct, active_total_value } = data;
+ document.getElementById("summary-stats").innerHTML = `
+  <h3 style="margin-bottom: 10px; text-align: center;">Stats summary: <p1 style="color: #778899">${portfolio_name}</p1></h3>
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;">
+    <div style="flex: 1; min-width: 300px;">
+      <span><strong>Inserted funds:</strong> ${formatVal(total_invested)} ${portfolio_currency}</span>
+      <span><strong>Portfolio value:</strong> ${formatVal(total_value)} ${portfolio_currency}</span>
+    </div>
+    <div style="flex: 1; min-width: 300px;">
+      <span><strong>Currently invested:</strong> ${formatVal(active_total_value)} ${portfolio_currency}</span>
+      <span><strong>Free funds:</strong> ${formatVal(free_funds)} ${portfolio_currency}</span>
+    </div>
+    <div style="flex-basis: 100%; margin-top: 8px;" class="profit ${
+      total_profit_abs > 0 ? 'positive' : total_profit_abs < 0 ? 'negative' : 'zero'
+    }">
+      <strong>Total P/L:</strong> ${formatVal(total_profit_abs)} ${portfolio_currency} (${formatVal(total_profit_pct)}%)
+    </div>
+  </div>`;
+
+  if (!coins || coins.length === 0) {
+    container.innerHTML = `<div style="color:#888;">No transactions in the portfolio.</div>`;
+    if (last_price_update && typeof window.scheduleNextRefresh === 'function') {
+    window.scheduleNextRefresh(last_price_update);
+  }
+    return;
+  }
+
+  container.innerHTML = coins.map(coin => {
+    const profitColor = coin.profit_abs > 0 ? "green" : coin.profit_abs < 0 ? "red" : "#888";
+    const txs = coin.transactions.map(tx => {
+      const plClass = tx.profit_loss > 0 ? "btn-profit" : tx.profit_loss < 0 ? "btn-loss" : "btn-neutral";
+      return `
+<li class="transaction-row" data-tx-id="${tx.id}" style="display:none;">
+  <div class="row-main">
+    <span class="tx-amount">${formatVal(tx.amount)} ${coin.symbol}</span>
+    <span class="tx-value">${formatVal(tx.current_price)} ${portfolio_currency}</span>
+    <span class="tx-pl" style="color:${plClass === 'btn-profit' ? 'green' : plClass === 'btn-loss' ? 'red' : '#888'};">
+      ${formatVal(tx.profit_loss)} ${portfolio_currency} (${formatVal(tx.profit_loss_percentage)}%)
+    </span>
+  </div>
+  <div class="tx-detail" style="display:none;">
+    <div class="row-meta">
+      <span class="tx-date">Created at: ${tx.created}</span>
+      <span class="tx-buyprice">Purchase price: ${formatVal(tx.price)} ${portfolio_currency}</span>
+    </div>
+    <form class="sell-form" data-tx-id="${tx.id}" data-amount="${tx.amount}" data-symbol="${coin.symbol}" data-currency="${portfolio_currency}">
+      <button type="submit" class="sell-action-btn ${plClass}">Close</button>
+      <span class="sell-status"></span>
+    </form>
+  </div>
+</li>`;
+    }).join('');
+
+    return `
+<div class="coin-accordion-section" data-coin-id="${coin.id}">
+  <button class="accordion-btn">
+    <span>${formatVal(coin.total_amount)} ${coin.symbol}</span>
+     <span>${coin.name}</span>
+    <span class="profit-box" style="color:${profitColor};">
+      ${formatVal(coin.profit_abs)} ${portfolio_currency} (${formatVal(coin.profit_pct)}%)
+    </span>
+  </button>
+  <ul class="transactions-list">${txs}</ul>
+</div>`;
+  }).join('');
+
+  attachAccordionEvents();
+  attachSellEvents();
+
+  const selectedCoin = sessionStorage.getItem('selectedCoin');
+  const selectedTx = sessionStorage.getItem('selectedTx');
+
+  if (selectedCoin) {
+    const section = document.querySelector(`.coin-accordion-section[data-coin-id="${selectedCoin}"]`);
+    if (section) {
+      const list = section.querySelector('.transactions-list');
+      list.classList.add('open');
+      list.querySelectorAll('.transaction-row').forEach(row => row.style.display = 'flex');
+    }
+  }
+
+  if (selectedTx) {
+    const row = document.querySelector(`.transaction-row[data-tx-id="${selectedTx}"]`);
+    if (row) {
+      row.classList.add('active');
+      const detail = row.querySelector('.tx-detail');
+      if (detail) detail.style.display = 'block';
+    }
+  }
+   if (last_price_update && typeof window.scheduleNextRefresh === 'function') {
+    window.scheduleNextRefresh(last_price_update);
+  }
+}
+
+function attachAccordionEvents() {
+  document.querySelectorAll('.accordion-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const section = btn.closest('.coin-accordion-section');
+      const coinId = section.getAttribute('data-coin-id');
+      sessionStorage.setItem('selectedCoin', coinId);
+      const list = section.querySelector('.transactions-list');
+      const isOpen = list.classList.contains('open');
+      document.querySelectorAll('.transactions-list').forEach(l => {
+        l.classList.remove('open');
+        l.querySelectorAll('.transaction-row').forEach(row => row.style.display = 'none');
+      });
+      if (!isOpen) {
+        list.classList.add('open');
+        list.querySelectorAll('.transaction-row').forEach(row => row.style.display = 'flex');
+      }
+    });
+  });
+  document.querySelectorAll('.transactions-list').forEach(list => {
+    list.querySelectorAll('.transaction-row').forEach(row => {
+      row.addEventListener('click', function (e) {
+        if (e.target.tagName === 'BUTTON') return;
+        const detail = row.querySelector('.tx-detail');
+        const isActive = row.classList.contains('active');
+        list.querySelectorAll('.transaction-row').forEach(r => {
+          r.classList.remove('active');
+          r.querySelector('.tx-detail').style.display = 'none';
+        });
+        if (!isActive) {
+          row.classList.add('active');
+          detail.style.display = 'block';
+          sessionStorage.setItem('selectedTx', row.getAttribute('data-tx-id'));
+        }
+      });
+    });
+  });
+}
+
+function attachSellEvents() {
+  document.querySelectorAll('.sell-form').forEach(form => {
+    const txId = form.getAttribute('data-tx-id');
+    const statusEl = form.querySelector('.sell-status');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      statusEl.textContent = "Processing...";
+      statusEl.style.color = "#333";
+      fetch("{% url 'ajax_sell_transaction' %}", {
+        method: "POST",
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `transaction_id=${txId}`
+      })
+      .then(resp => resp.json())
+      .then(data => {
+        statusEl.textContent = data.message || "OK";
+        statusEl.style.color = (data.status === "ok") ? "green" : "red";
+        if (data.status === "ok") {
+          sessionStorage.setItem('selectedTx', txId);
+          setTimeout(() => window.location.reload(), 600);
+        }
+      })
+      .catch(() => {
+        statusEl.textContent = "Error during request";
+        statusEl.style.color = "red";
+      });
+    });
+  });
+}
+
+function fetchSummary() {
+  const parts = window.location.pathname.split("/").filter(p => p);
+  const portfolioId = parts[parts.length - 1];
+  let url = `/ajax/my_transactions/`;
+  if (portfolioId !== 'portfolio_summary') {
+    url = url + portfolioId + '/';
+  }
+  fetch(url, {
+    headers: { "X-Requested-With": "XMLHttpRequest" }
+  })
+    .then(resp => resp.json())
+    .then(renderAccordion);
+}
+
+window.handleExpired = fetchSummary;
+document.addEventListener("DOMContentLoaded", fetchSummary);
+</script>
+{% endblock %}

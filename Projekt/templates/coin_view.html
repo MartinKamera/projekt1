@@ -1,75 +1,274 @@
 {% extends 'base.html' %}
-
+{% block title %}{{ coin.name }}{% endblock %}
 {% block content %}
-<h2>{{ coin.name }} – vývoj ceny ({{ currency }})</h2>
+<style>
+.coin-detail-container {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.09);
+    padding: 28px 30px;
+    margin: 0 auto;
+    max-width: 700px;
+    margin-top: 28px;
+}
+.coin-detail-container h2 {
+    font-size: 2rem;
+    margin-bottom: 7px;
+    font-weight: 600;
+    color: #222f3e;
+}
+.coin-meta {
+    color: #475267;
+    margin-bottom: 18px;
+    font-size: 1.03rem;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+#current-price {
+    font-weight: bold;
+    color: #34495e;
+}
+#computed-interval {
+    color: #818181;
+    font-size: 0.97em;
+}
+#last-updated {
+    font-size: 0.95em;
+    color: #27ae60;
+}
+.period-btn {
+    background: #fff;
+    color: #2980b9;
+    border: 1.5px solid #ddd;
+    border-radius: 5px;
+    padding: 6px 15px;
+    margin-right: 8px;
+    font-size: 0.99em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    box-shadow: 0 1px 3px rgba(44,62,80,0.03);
+}
+.period-btn.selected,
+.period-btn:hover {
+    background: #3498db;
+    color: #fff;
+    border-color: #3498db;
+}
+#plotly-chart {
+    margin-top: 25px;
+    background: #fafbfc;
+    border-radius: 8px;
+    min-height: 380px;
+    max-height: 380px;
+    box-shadow: 0 1px 5px rgba(44,62,80,0.04);
+    padding: 12px;
+}
+@media (max-width: 650px) {
+    .coin-detail-container {
+        padding: 16px 10px;
+    }
+    #plotly-chart {
+        padding: 2px;
+        min-height: 280px;
+    }
+}
+</style>
 
-<canvas id="priceChart" width="800" height="400"></canvas>
+<div class="coin-detail-container">
+  <h2>
+    <span id="coin-name">{{ coin.name }}</span>
+    (<span id="coin-symbol">{{ coin.symbol }}</span>)
+  </h2>
+  <div class="coin-meta">
+    <span id="current-price">Current price: {{ last_price|floatformat:5 }} {{ currency }}</span>
+    <span id="computed-interval"></span>
+    <span id="last-updated" style="margin-left: 20px;"></span>
+  </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+  <div style="margin: 20px 0;">
+    <button class="period-btn{% if selected_period == '24h' %} selected{% endif %}" data-period="24h">24h</button>
+    <button class="period-btn{% if selected_period == '7d' %} selected{% endif %}" data-period="7d">7d</button>
+    <button class="period-btn{% if selected_period == '30d' %} selected{% endif %}" data-period="30d">30d</button>
+  </div>
 
+  <div id="plotly-chart"></div>
+</div>
+
+<div style="display: flex; justify-content: center; margin-top: 30px;">
+  <form id="buy-form" method="post" autocomplete="off"
+    style="display: flex; align-items: flex-start; gap: 16px; background: #f5f7fa; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+    {% csrf_token %}
+
+    <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 4px;">
+      <label><input type="radio" name="method" value="by_amount" checked> By amount</label>
+      <label><input type="radio" name="method" value="by_value"> By value</label>
+    </div>
+
+    <input type="hidden" name="coin_id" value="{{ coin.id }}">
+
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <input id="buy-value" name="value" type="number" step="0.00001" min="0.00001"
+        placeholder="Enter amount or value"
+        style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; width: 160px;" required>
+      <div id="buy-info" style="font-size: 0.94em; color: #444; min-height: 1.2em;"></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <button type="submit"
+        style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 6px;">Buy</button>
+      <span id="buy-status" style="font-weight: 500;"></span>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <script>
+const periodButtons = document.querySelectorAll('.period-btn');
+const plotDiv = document.getElementById('plotly-chart');
+const intervalSpan = document.getElementById('computed-interval');
+const lastUpdatedSpan = document.getElementById('last-updated');
+const priceSpan = document.getElementById('current-price');
+const coinName = document.getElementById('coin-name');
+const coinSymbol = document.getElementById('coin-symbol');
 
-    const chartData = {{ chart_data|safe }};
+function drawPlot(ohlcData) {
+  const data = [{
+    x: ohlcData.x,
+    open: ohlcData.open,
+    high: ohlcData.high,
+    low: ohlcData.low,
+    close: ohlcData.close,
+    type: 'candlestick',
+    name: 'OHLC',
+  }];
+  Plotly.newPlot(plotDiv, data, { margin: { t: 20 }, xaxis: { rangeslider: { visible: false } } });
+}
 
+function formatDate(iso) {
+  if (!iso) return "";
+  const dt = new Date(iso);
+  return dt.toLocaleString('en-GB');
+}
 
-    console.log('Načtená data:', chartData);
+function fetchAndRenderCoin(period = null) {
+  if (!period) {
+    const selBtn = document.querySelector('.period-btn.selected');
+    period = selBtn ? selBtn.dataset.period : "24h";
+  }
+  const url = `${window.location.pathname.replace(/\/$/, '')}/ajax/?period=${period}`;
+  fetch(url, {
+    headers: { "x-requested-with": "XMLHttpRequest" }
+  })
+    .then(resp => resp.json())
+    .then(data => {
+      coinName.textContent = data.coin.name;
+      coinSymbol.textContent = data.coin.symbol;
+      const n = Number(data.last_price);
+      priceSpan.textContent = `Current price: ${!isNaN(n) ? n.toFixed(5) : "-"} ${data.currency}`;
+      intervalSpan.textContent = `(${data.period})`;
+      drawPlot(data.ohlc_data);
 
-    const ctx = document.getElementById('priceChart').getContext('2d');
-
-    const chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            datasets: [{
-                label: 'Cena v {{ currency }}',
-                data: chartData,
-                borderColor: 'rgba(54, 162, 235, 1)',
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            parsing: {
-                xAxisKey: 'x',
-                yAxisKey: 'y'
-            },
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        tooltipFormat: 'dd.MM.yyyy HH:mm',
-                        displayFormats: {
-                            hour: 'dd.MM HH:mm',
-                            day: 'dd.MM'
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Čas'
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Cena ({{ currency }})'
-                    },
-                    beginAtZero: false
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + context.formattedValue + ' {{ currency }}';
-                        }
-                    }
-                }
-            }
+      if (data.last_updated) {
+        window.lastUpdated = data.last_updated;
+        if (typeof window.scheduleNextRefresh === 'function') {
+          window.scheduleNextRefresh(window.lastUpdated);
         }
+      }
     });
+}
+
+periodButtons.forEach(btn => {
+  btn.addEventListener('click', function () {
+    periodButtons.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    fetchAndRenderCoin(btn.dataset.period);
+    history.replaceState(null, '', `${window.location.pathname}?period=${btn.dataset.period}`);
+  });
+});
+
+window.handleExpired = function () {
+  fetchAndRenderCoin();
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+  fetchAndRenderCoin();
+});
+
+const buyValueInput = document.getElementById("buy-value");
+const buyInfo = document.getElementById("buy-info");
+const methodInputs = document.querySelectorAll("input[name=method]");
+let currentPrice = parseFloat({{ last_price|floatformat:"10" }});
+
+function updateBuyInfo() {
+  const val = parseFloat(buyValueInput.value);
+  const method = document.querySelector("input[name=method]:checked").value;
+  if (isNaN(val) || val <= 0 || !currentPrice) {
+    buyInfo.textContent = "";
+    return;
+  }
+  if (method === "by_amount") {
+    const total = val * currentPrice;
+    buyInfo.textContent = `${total.toFixed(5)} {{ currency }}`;
+  } else {
+    const amount = val / currentPrice;
+    buyInfo.textContent = `${amount.toFixed(5)} {{ coin.symbol }}`;
+  }
+}
+
+buyValueInput.addEventListener("input", updateBuyInfo);
+methodInputs.forEach(r => r.addEventListener("change", updateBuyInfo));
+
+document.getElementById('buy-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const form = e.target;
+  const method = form.method.value;
+  const coin_id = form.coin_id.value;
+  const value = parseFloat(form.value.value);
+  const status = document.getElementById('buy-status');
+
+  if (isNaN(value) || value < 0.00001) {
+    status.textContent = "Enter a value of at least 0.00001";
+    status.style.color = "red";
+    return;
+  }
+
+  if (method === "by_value") {
+    const expectedAmount = value / currentPrice;
+    if (expectedAmount < 0.0001) {
+      status.textContent = `Minimum is 0.0001 {{ coin.symbol }}`;
+      status.style.color = "red";
+      return;
+    }
+  }
+
+  status.textContent = "Processing...";
+  status.style.color = "#333";
+
+  fetch("{% url 'buy_crypto' %}", {
+    method: "POST",
+    headers: {
+      'X-CSRFToken': form.querySelector('input[name=csrfmiddlewaretoken]').value,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `method=${encodeURIComponent(method)}&coin_id=${encodeURIComponent(coin_id)}&value=${encodeURIComponent(value)}`
+  })
+    .then(resp => resp.json())
+    .then(data => {
+      status.textContent = data.message || data.error || "OK";
+      status.style.color = (data.status === "ok") ? "green" : "red";
+      if (data.status === "ok") {
+        form.reset();
+        buyInfo.textContent = "";
+      }
+    })
+    .catch(() => {
+      status.textContent = "Request failed";
+      status.style.color = "red";
+    });
+});
 </script>
 {% endblock %}
