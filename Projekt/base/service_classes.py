@@ -1,4 +1,4 @@
-from base.models import Coin, PriceHistory, Portfolio
+from base.models import Coin
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.utils import timezone
@@ -6,8 +6,12 @@ from datetime import timedelta
 import pandas as pd
 import time
 from collections import defaultdict
+from functools import wraps
+
 
 class CoinListService:
+
+    
     def __init__(self, currency="USD", preloaded_coins=None):
         self.currency = currency.upper()
         self.cache_key = f"coinlist_with_prices_{self.currency.lower()}"
@@ -64,6 +68,7 @@ class CoinListService:
                (coin["symbol"] and q in coin["symbol"].lower())]
         
 class CoindDetailsService:
+    
     def __init__(self, coin_id, currency, period):
         self.coin_id = coin_id
         self.currency = currency.lower()
@@ -227,3 +232,62 @@ class PortfolioSummaryService:
             "profit_loss_percentage": float(profit.get("profit_loss_percentage")) if profit.get("profit_loss_percentage") is not None else None,
             "current_price": float(tx.get_total_value()) if tx.get_total_value() is not None else None,
         }
+    
+def require_cache_online(default_return=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if not CacheService.checked:
+                CacheService._check_connection()
+            if not CacheService.online:
+                return default_return
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+class CacheService:
+    online = None      
+    checked = False    
+
+    @staticmethod
+    def _check_connection():
+        try:
+            cache.get('test_cache_connection')
+            CacheService.online = True
+        except Exception:
+            CacheService.online = False
+            print("Cache is not available. Some features may not work correctly.")
+        CacheService.checked = True
+
+    @staticmethod
+    @require_cache_online()
+    def clear_cache(key=None):
+        if key:
+            try:
+                cache.delete(key)
+            except Exception as e:
+                raise RuntimeError(f"Error clearing cache for {key}: {e}")
+            return
+        else:
+            try:
+                cache.clear()
+            except Exception as e:
+                raise RuntimeError(f"Error clearing cache: {e}")
+
+    @staticmethod
+    @require_cache_online()
+    def set_cache(key, value, timeout=300):
+        try:
+            cache.set(key, value, timeout=timeout)
+        except Exception as e:
+            raise RuntimeError(f"Error setting cache for {key}: {e}")
+
+    @staticmethod
+    @require_cache_online(default_return=None)
+    def get_cache(key):
+        try:
+            return cache.get(key)
+        except Exception as e:
+            raise RuntimeError(f"Error getting cache for {key}: {e}")
+        

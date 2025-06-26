@@ -1,14 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import User
 from enum import Enum
-from collections import defaultdict
-import pandas as pd
 from decimal import Decimal, ROUND_DOWN
 from datetime import timedelta
 from django.utils import timezone
 from django.core.cache import cache
-import time
-import os
+
 
 class MyabstractModel(models.Model):
     created = models.DateTimeField(auto_now_add=True, null=True, blank=True)
@@ -52,7 +49,7 @@ class Portfolio(MyabstractModel):
             self.save()
             return True
         except Exception as e:
-            print(f'nastala chyba:{e}')
+            print(f'Error closing transaction {transaction_id} in portfolio {self.name}: {e}')
             return False
         
 
@@ -101,29 +98,31 @@ class Coin(MyabstractModel):
     id = models.CharField(max_length=30, primary_key=True)
     symbol = models.CharField(max_length=10, blank=True, null=True)
     name = models.CharField(max_length=30, blank=True, null=True)
+     
 
     def get_current_price(self, currency="USD"):
-        last_price = cache.get(f'{self.id}_{currency.lower()}_current')
+        from base.service_classes import CacheService
+
+        last_price = CacheService.get_cache(f'{self.id}_{currency.lower()}_current')
         if last_price is None:
             try:
                 latest_entry = self.price_history.order_by('-created').first()
                 if latest_entry:
                     last_price = getattr(latest_entry, f'price{currency}', None)
                     if last_price is not None:
-                        cache.set(f'{self.id}_{currency.lower()}_current', last_price, timeout=300)
+                        CacheService.set_cache(f'{self.id}_{currency.lower()}_current', last_price, timeout=300)
             except PriceHistory.DoesNotExist:
                 return None
 
         return Decimal(last_price).quantize(Decimal("0.00001"), rounding=ROUND_DOWN)
 
-    def update_price_cache(self, price_dict: dict):
-        for currency_code, value in price_dict.items():
-            cache_key = f'{self.id}_{currency_code.lower()}_current'
-            cache.set(cache_key, value)
+    def get_cache_key(self, currency="USD"):
+        return f'{self.id}_{currency.lower()}_current'
     
     def get_proc_growth_deltas(self, currency="USD"):
+        from base.service_classes import CacheService
         key = f'{self.id}_{currency.lower()}_growth_stats'
-        result = cache.get(key)
+        result = CacheService.get_cache(key)
 
         if result is None:
             now = timezone.now()
@@ -163,7 +162,7 @@ class Coin(MyabstractModel):
                 else:
                     result[label] = None
 
-            cache.set(key, result, timeout=300)
+            CacheService.set_cache(key, result, timeout=300)
 
         return result
 
@@ -216,7 +215,7 @@ class PriceHistory(MyabstractModel):
         verbose_name = "Price history entry"
         verbose_name_plural = "Price history"
         indexes = [
-            models.Index(fields=['created']),  # ⬅⬅⬅ tady
+            models.Index(fields=['created']),
         ]
 
     def __str__(self):

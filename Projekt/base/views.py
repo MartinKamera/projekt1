@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from base.form_class_extention import PortfolioCreationForm
-from base.models import Portfolio, Coin, Portfolio, PriceHistory 
+from base.models import Portfolio, Coin, Portfolio 
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
@@ -8,13 +8,12 @@ from django.contrib.auth.forms import UserCreationForm
 from base.form_class_extention import LoginForm
 from django.urls import reverse
 from django.shortcuts import render, redirect
-from django.utils import timezone
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_GET
 from base.services import get_active_portfolio, get_user_portfolios, invalidate_active_portfolio_cache
-from base.service_classes import CoinListService, CoindDetailsService, PortfolioSummaryService
+from base.service_classes import CoinListService, CoindDetailsService, PortfolioSummaryService, CacheService
 from django.utils import timezone
 from decimal import Decimal, ROUND_DOWN
 import time
@@ -34,8 +33,9 @@ def portfolio_creation(request):
                 currency=currency,
                 user=user
             )
-            cache.delete(f"user_portfolios_{request.user.id}")
-            cache.delete(f'active_portfolio_{request.user.id}')
+            CacheService.clear_cache(f'user_portfolios_{user.id}')
+            CacheService.clear_cache(f'active_portfolio_{user.id}')
+            
             request.session['active_portfolio_id'] = portfolio.id
             
             return render(request, 'redirect_replace.html', {'target_url': reverse('coin_list')})
@@ -81,7 +81,7 @@ def login(request):
             if portfolios.exists():
                 active_portfolio = portfolios.first()
                 request.session['active_portfolio_id'] = active_portfolio.id
-                cache.set(f'active_portfolio_{user.id}', active_portfolio, timeout=3600)
+                CacheService.set_cache(f'active_portfolio_{user.id}', active_portfolio, timeout=3600)
                 return render(request, 'redirect_replace.html', {'target_url': reverse('coin_list')})
             else:
                 return render(request, 'redirect_replace.html', {'target_url': reverse('portfolio_creation')})
@@ -94,8 +94,8 @@ def login(request):
 @login_required
 def logout(request):
     if request.user.is_authenticated:
-        cache.delete(f'active_portfolio_{request.user.id}')
-        cache.delete(f"user_portfolios_{request.user.id}")
+        CacheService.clear_cache(f'active_portfolio_{request.user.id}')
+        CacheService.clear_cache(f'user_portfolios_{request.user.id}')
         auth_logout(request)
     return render(request, 'redirect_replace.html', {'target_url': reverse('coin_list')})
 
@@ -136,7 +136,7 @@ def ajax_coin_detail(request, coin_id):
     ohlc_data = service.get_ohlc_data()
     last_price = service.get_last_price()
 
-    last_updated = cache.get('last_price_update')
+    last_updated = CacheService.get_cache('last_price_update')
     last_updated_str = last_updated.isoformat() if last_updated else None
 
     coin = Coin.objects.get(id=coin_id)
@@ -182,7 +182,7 @@ def ajax_search_coins(request):
     ascending = direction == "falling"  
     service = CoinListService(currency)
     coins = service.get_coinlist(query=query, sort_by_growth=sort_by_growth, ascending=ascending)
-    last_updated = cache.get('last_price_update')
+    last_updated = CacheService.get_cache('last_price_update')
     last_updated_str = last_updated.isoformat() if last_updated else None
 
     data = [
@@ -210,10 +210,10 @@ def portfolioSelection(request):
             portfolio_id = request.POST.get('switch')
             portfolio = Portfolio.objects.get(id=portfolio_id, user=request.user)
             request.session['active_portfolio_id'] = portfolio.id
-            cache.set(f'active_portfolio_{request.user.id}', portfolio, timeout=3600)
+            CacheService.set_cache(f'active_portfolio_{request.user.id}', portfolio, timeout=3600)
         except Portfolio.DoesNotExist:
             request.session['active_portfolio_id'] = None
-            cache.delete(f'active_portfolio_{request.user.id}')
+            CacheService.clear_cache(f'active_portfolio_{request.user.id}')
 
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'status': 'ok'})
@@ -249,7 +249,7 @@ def buy_crypto(request):
             return JsonResponse({"status": "error", "message": "Enter a valid amount."})
         price = Decimal(str(coin.get_current_price(portfolio.currency))).quantize(Decimal("0.00001"), rounding=ROUND_DOWN)
         portfolio.create_transaction(coin=coin, amount=amount, price=price)
-        cache.delete(f'portfolio_summary_{portfolio.id}')
+        CacheService.clear_cache(f'portfolio_summary_{portfolio.id}')
         invalidate_active_portfolio_cache(request)
         
         return JsonResponse({
@@ -275,7 +275,7 @@ def buy_crypto(request):
 
         amount = (value / price).quantize(Decimal("0.00001"), rounding=ROUND_DOWN)
         portfolio.create_transaction(coin=coin, amount=amount, price=price)
-        cache.delete(f'portfolio_summary_{portfolio.id}')
+        CacheService.clear_cache(f'portfolio_summary_{portfolio.id}')
         invalidate_active_portfolio_cache(request)
         return JsonResponse({
             "status": "ok",
@@ -284,27 +284,6 @@ def buy_crypto(request):
 
     else:
         return JsonResponse({"status": "error", "message": "Invalid method."})
-
-
-
-@never_cache
-def lastentry_api(request):
-    cache_key = 'lastentry'
-    last_update = PriceHistory.objects.order_by('-created').first().created
-    fetch_interval = 300
-    cache.set(cache_key, last_update, timeout= None)  
-    
-    now = timezone.now()
-    seconds_since = (now - last_update).total_seconds()
-    expired = seconds_since > fetch_interval
-    if expired:
-        cache.set(cache_key, PriceHistory.objects.filter(coin_id='bitcoin').last.created(), None)
-    response = {
-        'last_update': last_update.isoformat(),
-        'seconds_since': int(seconds_since),
-        'expired': expired,
-    }
-    return JsonResponse(response)
 
 @never_cache
 @login_required
@@ -350,7 +329,7 @@ def ajax_my_transactions(request, portfolio_id=None):
             "total_amount": float(tab["total_amount"])
         })
 
-    last_updated = cache.get('last_price_update')
+    last_updated = CacheService.get_cache('last_price_update')
 
     return JsonResponse({
         "coins": coins_data,
@@ -428,9 +407,9 @@ def ajax_delete_portfolio(request):
     try:
         portfolio = Portfolio.objects.get(id=portfolio_id, user=request.user)
         portfolio.delete()
-        cache.delete(f'user_portfolios_{request.user.id}')
+        CacheService.clear_cache(f'user_portfolios_{request.user.id}')
         if request.session.get('active_portfolio_id') == int(portfolio_id):
-            cache.delete(f'active_portfolio_{request.user.id}')
+            CacheService.clear_cache(f'active_portfolio_{request.user.id}')
             request.session['active_portfolio_id'] = None
         return JsonResponse({"status": "ok", "message": "Portfolio deleted successfully"})
     except Portfolio.DoesNotExist:

@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path
 import base.views as views
-from base.views import lastentry_api
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -14,7 +13,6 @@ urlpatterns = [
     path("logout/",views.logout, name = 'logout' ),
     path('portfolio/switch/', views.portfolioSelection, name='portfolioSelection'),
     path('ajax/search_coins/', views.ajax_search_coins, name='ajax_search_coins'),
-    path('api/lastentry/', views.lastentry_api, name='lastentry_api'),
     path("buy_crypto/", views.buy_crypto, name="buy_crypto"),
     path("portfolio_summary/<int:portfolio_id>/", views.my_transactions, name="my_transactions"),
     path("portfolio_summary/", views.my_transactions, name="my_transactions"),
